@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Divide &amp; Conquer Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f6fa;--s1:#fff;--s2:#eef0f6;--s3:#e4e7f2;
+  --b1:#d0d5e8;--b2:#b8bfd8;
+  --txt:#1a1d2e;--mut:#6b7280;--mut2:#9ca3af;
+  --divide:#2563eb;--conquer:#7c3aed;--combine:#059669;
+  --acc:#d97706;--red:#dc2626;
+  --nd:#fff;--ndd:#dbeafe;--ndc:#ede9fe;--nds:#dcfce7;--nda:#fef3c7;
+  --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;
+}
+html{font-size:14px}
+body{font-family:var(--fm);background:var(--bg);color:var(--txt);min-height:100vh}
+
+/* HEADER */
+header{
+  background:var(--txt);color:#fff;padding:0 20px;height:54px;
+  display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:200;
+  border-bottom:3px solid var(--divide);
+}
+.logo{font-family:var(--fh);font-size:15px;font-weight:800;flex-shrink:0;white-space:nowrap}
+.logo span{color:#60a5fa}
+nav{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+.nb{
+  font-family:var(--fm);font-size:11px;white-space:nowrap;padding:5px 12px;
+  background:transparent;color:rgba(255,255,255,.5);border:1px solid transparent;
+  border-radius:4px;cursor:pointer;transition:.15s;
+}
+.nb:hover{color:#fff;border-color:rgba(255,255,255,.3)}
+.nb.active{color:#60a5fa;border-color:#60a5fa;background:rgba(96,165,250,.15)}
+
+/* PAGE LAYOUT */
+.page{display:grid;grid-template-columns:290px 1fr;min-height:calc(100vh - 54px)}
+@media(max-width:800px){.page{grid-template-columns:1fr}}
+
+/* SIDEBAR */
+.sidebar{
+  background:var(--s1);border-right:1px solid var(--b1);padding:18px 16px;
+  display:flex;flex-direction:column;gap:16px;
+  position:sticky;top:54px;height:calc(100vh - 54px);overflow-y:auto;
+}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--b1)}
+.anum{font-family:var(--fh);font-size:38px;font-weight:800;color:var(--b1);line-height:1}
+.aname{font-family:var(--fh);font-size:21px;font-weight:800;margin-top:-6px;line-height:1.2}
+.adesc{font-size:11px;line-height:1.8;color:var(--mut)}
+
+/* DCC Steps */
+.dcc{display:flex;flex-direction:column;gap:2px}
+.dcc-hd{
+  padding:7px 10px;font-size:9px;font-weight:500;
+  letter-spacing:.15em;text-transform:uppercase;border-radius:4px 4px 0 0;
+}
+.dcc-hd.d {background:var(--ndd);color:var(--divide)}
+.dcc-hd.c {background:var(--ndc);color:var(--conquer)}
+.dcc-hd.cb{background:var(--nds);color:var(--combine)}
+.dcc-body{
+  padding:8px 10px;font-size:11px;line-height:1.65;color:var(--mut);
+  background:var(--s2);border-radius:0 0 4px 4px;margin-bottom:2px;
+}
+
+/* Complexity */
+.cx{background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:12px}
+.cx-h{
+  font-family:var(--fh);font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--mut);margin-bottom:9px;
+}
+.cxr{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1);gap:8px}
+.cxr:last-child{border:none}
+.cxl{font-size:10px;color:var(--mut2);flex-shrink:0}
+.cxv{font-size:11px;color:var(--txt);font-weight:500;text-align:right}
+.cxv.hi{color:var(--combine);font-weight:700}
+
+/* Controls */
+.ctrl{display:flex;flex-wrap:wrap;gap:6px}
+.btn{
+  font-family:var(--fm);font-size:11px;font-weight:500;padding:7px 13px;
+  border-radius:4px;border:1px solid var(--b2);background:var(--s1);
+  color:var(--txt);cursor:pointer;transition:.15s;
+}
+.btn:hover{background:var(--s2);border-color:var(--divide)}
+.btn.run{background:var(--divide);color:#fff;border-color:var(--divide);font-weight:700}
+.btn.run:hover{background:#1d4ed8;box-shadow:0 2px 10px rgba(37,99,235,.3)}
+.btn.ghost{background:transparent;color:var(--mut);border-color:var(--b1)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.sprow{width:100%;display:flex;align-items:center;gap:8px;margin-top:3px}
+.splbl{font-size:9px;color:var(--mut2);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+input[type=range]{flex:1;height:3px;appearance:none;background:var(--b2);border-radius:2px;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:12px;height:12px;border-radius:50%;background:var(--divide)}
+
+/* Status */
+.stbar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mut)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--b2);animation:blink 2s infinite;flex-shrink:0}
+.dot.running{background:var(--divide)}
+.dot.done{background:var(--combine);animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* Legend */
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--mut);align-items:center}
+.leg{display:flex;align-items:center;gap:5px}
+.lb{width:13px;height:13px;border-radius:2px;border:2px solid;flex-shrink:0}
+.lb.d{background:var(--ndd);border-color:var(--divide)}
+.lb.c{background:var(--ndc);border-color:var(--conquer)}
+.lb.s{background:var(--nds);border-color:var(--combine)}
+.lb.a{background:var(--nda);border-color:var(--acc)}
+
+/* MAIN AREA */
+.main{display:flex;flex-direction:column}
+.phasebar{
+  background:var(--s1);border-bottom:1px solid var(--b1);padding:9px 20px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.phases{display:flex;align-items:center;gap:7px}
+.ph{
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:4px 12px;
+  border-radius:20px;border:1px solid var(--b2);color:var(--mut2);transition:.2s;
+}
+.ph-arr{color:var(--mut2);font-size:12px}
+.ph.don {border-color:var(--divide);background:rgba(37,99,235,.08);color:var(--divide)}
+.ph.con {border-color:var(--conquer);background:rgba(124,58,237,.08);color:var(--conquer)}
+.ph.cbon{border-color:var(--combine);background:rgba(5,150,105,.08);color:var(--combine)}
+.newbtn{
+  font-family:var(--fm);font-size:11px;padding:5px 12px;background:transparent;
+  color:var(--mut);border:1px solid var(--b1);border-radius:4px;cursor:pointer;transition:.15s;
+}
+.newbtn:hover{background:var(--s2);color:var(--txt)}
+
+/* Tree scroll */
+.treescroll{flex:1;overflow:auto;padding:24px 16px 16px;background:var(--bg);min-height:400px}
+#treeRoot{display:flex;flex-direction:column;align-items:center;min-width:500px}
+
+/* Tree nodes */
+.tnw{display:flex;flex-direction:column;align-items:center;padding:0 5px;position:relative}
+.tnw::before{
+  content:'';position:absolute;top:-18px;left:50%;
+  width:2px;height:18px;background:var(--b2);transform:translateX(-50%);
+}
+.tnw.rootn::before{display:none}
+.node-lbl{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut2);margin-bottom:3px;text-align:center;min-height:12px}
+.anode{
+  display:flex;align-items:stretch;border:2px solid var(--b2);border-radius:6px;
+  overflow:hidden;background:var(--nd);box-shadow:0 2px 6px rgba(0,0,0,.06);
+  transition:all .3s cubic-bezier(.34,1.4,.64,1);margin-bottom:18px;
+}
+.anode.dividing {border-color:var(--divide);background:var(--ndd);transform:scale(1.05)}
+.anode.conquering{border-color:var(--conquer);background:var(--ndc);transform:scale(1.02)}
+.anode.merging  {border-color:var(--combine);background:var(--nds);transform:scale(1.05)}
+.anode.sorted   {border-color:var(--combine);background:var(--nds)}
+.anode.active   {border-color:var(--acc);background:var(--nda);transform:scale(1.07)}
+.anode.pivot-node{border-color:var(--acc);background:var(--nda)}
+.anode.base     {border-color:var(--b2);opacity:.8}
+.acell{
+  min-width:34px;height:36px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:500;border-right:1px solid var(--b1);padding:0 3px;transition:.2s;
+}
+.acell:last-child{border-right:none}
+.acell.hd {background:rgba(37,99,235,.12);color:var(--divide)}
+.acell.hc {background:rgba(124,58,237,.12);color:var(--conquer)}
+.acell.hm {background:rgba(5,150,105,.12);color:var(--combine)}
+.acell.hp {background:rgba(217,119,6,.2);color:var(--acc)}
+.acell.hmin{background:rgba(5,150,105,.12);color:var(--combine)}
+.acell.hmax{background:rgba(220,38,38,.1);color:var(--red)}
+
+/* Geometry canvas */
+#gc{display:block;width:100%;height:450px;background:#fff;border-top:1px solid var(--b1)}
+
+/* Matrix stage */
+.mstage{padding:24px;display:flex;flex-direction:column;gap:16px;align-items:center;min-height:420px}
+.mrowd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center}
+.mlbl{font-family:var(--fh);font-size:19px;font-weight:700;color:var(--mut)}
+.mgrid{
+  display:grid;gap:3px;border:2px solid var(--b2);border-radius:5px;
+  padding:7px;background:var(--s2);
+}
+.mc{
+  width:42px;height:42px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:500;border-radius:3px;background:var(--s1);
+  border:1px solid var(--b1);transition:.25s;color:var(--txt);
+}
+.mc.ha{background:rgba(37,99,235,.1);border-color:var(--divide)}
+.mc.hb{background:rgba(124,58,237,.1);border-color:var(--conquer)}
+.mc.hr{background:rgba(5,150,105,.1);border-color:var(--combine);color:var(--combine);font-weight:700}
+.mc.cp{animation:pcell .5s infinite alternate}
+@keyframes pcell{from{border-color:var(--acc)}to{background:rgba(217,119,6,.12);border-color:var(--acc)}}
+.sblock{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;max-width:580px}
+.sm{
+  padding:6px 11px;border-radius:4px;border:1px solid var(--b1);
+  font-size:11px;background:var(--s2);transition:.25s;color:var(--mut);
+}
+.sm.act{border-color:var(--acc);background:rgba(217,119,6,.06);color:var(--acc)}
+.sm.dn{border-color:var(--combine);color:var(--combine);background:rgba(5,150,105,.05)}
+.minfo{
+  font-size:12px;color:var(--mut);text-align:center;max-width:500px;line-height:1.7;
+  background:var(--s2);padding:11px 15px;border-radius:5px;border:1px solid var(--b1);
+}
+
+/* Log panel */
+.logpanel{background:var(--s1);border-top:1px solid var(--b1)}
+.loghdr{
+  font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut2);
+  padding:8px 18px;border-bottom:1px solid var(--b1);background:var(--s2);
+}
+.logentries{
+  height:100px;overflow-y:auto;padding:7px 18px;
+  display:flex;flex-direction:column;gap:3px;scroll-behavior:smooth;
+}
+.logentries::-webkit-scrollbar{width:3px}
+.logentries::-webkit-scrollbar-thumb{background:var(--b1)}
+.le{font-size:11px;line-height:1.5;padding:1px 0 1px 8px;border-left:2px solid transparent;animation:fin .22s}
+.le.init   {color:var(--mut2);border-color:var(--b1)}
+.le.divide {color:var(--divide);border-color:var(--divide)}
+.le.conquer{color:var(--conquer);border-color:var(--conquer)}
+.le.combine{color:var(--combine);border-color:var(--combine)}
+.le.info   {color:var(--acc);border-color:var(--acc)}
+.le.result {color:var(--txt);border-color:var(--combine);font-weight:600}
+@keyframes fin{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">D<span>&amp;</span>C Visualizer</div>
+  <nav id="algoNav">
+    <button class="nb active" data-algo="mergesort">Merge Sort</button>
+    <button class="nb" data-algo="quicksort">Quick Sort</button>
+    <button class="nb" data-algo="minmax">Min / Max</button>
+    <button class="nb" data-algo="maxsub">Max Subarray</button>
+    <button class="nb" data-algo="matrix">Matrix Mult</button>
+    <button class="nb" data-algo="strassen">Strassen's</button>
+    <button class="nb" data-algo="closest">Closest Pair</button>
+    <button class="nb" data-algo="convex">Convex Hull</button>
+  </nav>
+</header>
+
+<div class="page">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div>
+      <div class="anum" id="aNum">01</div>
+      <div class="aname" id="aName">Merge Sort</div>
+    </div>
+    <div class="adesc" id="aDesc"></div>
+
+    <div class="dcc">
+      <div>
+        <div class="dcc-hd d">&#9654; Divide</div>
+        <div class="dcc-body" id="sDivide"></div>
+      </div>
+      <div>
+        <div class="dcc-hd c">&#9654; Conquer</div>
+        <div class="dcc-body" id="sConquer"></div>
+      </div>
+      <div>
+        <div class="dcc-hd cb">&#9654; Combine</div>
+        <div class="dcc-body" id="sCombine"></div>
+      </div>
+    </div>
+
+    <div class="cx">
+      <div class="cx-h">Complexity Analysis</div>
+      <div class="cxr"><span class="cxl">Recurrence</span><span class="cxv" id="cxR"></span></div>
+      <div class="cxr"><span class="cxl">Time</span><span class="cxv hi" id="cxT"></span></div>
+      <div class="cxr"><span class="cxl">Space</span><span class="cxv" id="cxS"></span></div>
+      <div class="cxr"><span class="cxl">Master Thm</span><span class="cxv" id="cxM"></span></div>
+    </div>
+
+    <div class="ctrl">
+      <button class="btn run"   id="btnRun">&#9654; Run</button>
+      <button class="btn"       id="btnStep">Step &rarr;</button>
+      <button class="btn ghost" id="btnReset">&#8635; Reset</button>
+      <div class="sprow">
+        <span class="splbl">Speed</span>
+        <input type="range" id="spd" min="1" max="5" value="3"/>
+      </div>
+    </div>
+
+    <div class="stbar">
+      <span class="dot" id="dot"></span>
+      <span id="stxt">Ready</span>
+    </div>
+
+    <div class="legend">
+      <div class="leg"><div class="lb d"></div>Divide</div>
+      <div class="leg"><div class="lb c"></div>Conquer</div>
+      <div class="leg"><div class="lb s"></div>Sorted / Done</div>
+      <div class="leg"><div class="lb a"></div>Active / Pivot</div>
+    </div>
+  </aside>
+
+  <!-- MAIN VIZ -->
+  <div class="main">
+
+    <div class="phasebar">
+      <div class="phases">
+        <span class="ph" id="phD">Divide</span>
+        <span class="ph-arr">&#8594;</span>
+        <span class="ph" id="phC">Conquer</span>
+        <span class="ph-arr">&#8594;</span>
+        <span class="ph" id="phCB">Combine</span>
+      </div>
+      <button class="newbtn" id="btnNew">&#8853; New Data</button>
+    </div>
+
+    <div class="treescroll" id="vizArea">
+      <div id="treeRoot" style="display:flex;flex-direction:column;align-items:center"></div>
+      <canvas id="gc" style="display:none"></canvas>
+      <div class="mstage" id="mstage" style="display:none"></div>
+    </div>
+
+    <div class="logpanel">
+      <div class="loghdr">Execution Log</div>
+      <div class="logentries" id="logEl">
+        <div class="le init">&#9658; Press Run to animate, or Step to advance one operation at a time.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* =============================================================
+   DIVIDE & CONQUER VISUALIZER — Full Script
+   All 8 algorithms with step-by-step tree/canvas animation
+============================================================= */
+
+// ── State ─────────────────────────────────────────────────
+let algo = 'mergesort';
+let running = false, stepMode = false, stepRes = null;
+let arr = [], pts = [];
+let treeNodes = {}, nodeCounter = 0;
+
+const spd = () => [700, 460, 290, 160, 70][+g('spd').value - 1];
+
+// ── Algorithm metadata ────────────────────────────────────
+const META = {
+  mergesort: {
+    num:'01', name:'Merge Sort',
+    desc:'Recursively splits the array in half, sorts each half, then merges the two sorted halves back together.',
+    divide:'Split array at midpoint into two equal sub-arrays.',
+    conquer:'Recursively sort each sub-array until single elements remain (base case).',
+    combine:'Merge two sorted halves by comparing front elements and taking the smaller.',
+    rec:'T(n) = 2T(n/2) + Θ(n)', time:'Θ(n log n)', space:'O(n)', master:'Case 2 — a=2, b=2, f(n)=n'
+  },
+  quicksort: {
+    num:'02', name:'Quick Sort',
+    desc:'Picks a pivot element and partitions all elements — smaller left, larger right — then recurses on each side.',
+    divide:'Choose rightmost element as pivot; partition array around it.',
+    conquer:'Recursively sort the left and right partitions.',
+    combine:'No explicit combine — pivot lands in its final sorted position.',
+    rec:'T(n) = 2T(n/2) + Θ(n)', time:'Θ(n log n) avg', space:'O(log n)', master:'Avg Case 2; Worst: T(n)=T(n-1)+n'
+  },
+  minmax: {
+    num:'03', name:'Min / Max',
+    desc:'Find both minimum and maximum simultaneously using only ~3n/2 comparisons instead of the naive 2n.',
+    divide:'Split array into two halves at the midpoint.',
+    conquer:'Recursively find min and max of each half.',
+    combine:'Return min(left.min, right.min) and max(left.max, right.max).',
+    rec:'T(n) = 2T(n/2) + 2', time:'Θ(n)', space:'O(log n)', master:'Case 3 — ⌈3n/2⌉ − 2 comparisons'
+  },
+  maxsub: {
+    num:'04', name:'Max Subarray',
+    desc:'Find the contiguous subarray with the largest sum by considering left, right, and crossing subarrays at each level.',
+    divide:'Split array at midpoint into left and right halves.',
+    conquer:'Recursively find max subarray sum in each half.',
+    combine:'Find max crossing subarray spanning midpoint; return best of all three.',
+    rec:'T(n) = 2T(n/2) + Θ(n)', time:'Θ(n log n)', space:'O(log n)', master:'Case 2 — same structure as Merge Sort'
+  },
+  matrix: {
+    num:'05', name:'Matrix Multiply',
+    desc:"D&C matrix multiplication: partition n×n matrices into four n/2×n/2 sub-matrices and perform 8 recursive multiplications.",
+    divide:'Split A and B each into four (n/2)×(n/2) sub-matrices.',
+    conquer:'Perform 8 recursive sub-matrix multiplications.',
+    combine:'Add sub-products to form the four quadrants of C = A×B.',
+    rec:'T(n) = 8T(n/2) + Θ(n²)', time:'Θ(n³)', space:'Θ(n²)', master:'Case 1 — no improvement over naive'
+  },
+  strassen: {
+    num:'06', name:"Strassen's",
+    desc:"Reduces 8 sub-multiplications to 7 using auxiliary products M₁…M₇, achieving sub-cubic complexity.",
+    divide:'Partition A and B into four (n/2)×(n/2) sub-matrices.',
+    conquer:'Compute only 7 products M₁…M₇ instead of 8.',
+    combine:'Reconstruct C₁₁, C₁₂, C₂₁, C₂₂ from the M values using additions.',
+    rec:'T(n) = 7T(n/2) + Θ(n²)', time:'Θ(n^2.807)', space:'Θ(n²)', master:'Case 1 — log₂7 ≈ 2.807'
+  },
+  closest: {
+    num:'07', name:'Closest Pair',
+    desc:'Find the two closest points in O(n log n) by dividing the plane, recursing on each half, then checking a narrow strip.',
+    divide:'Sort by x; split point set at median into left and right halves.',
+    conquer:'Recursively find the closest pair in each half.',
+    combine:'Check δ-strip around dividing line for pairs closer than δ = min(dL, dR).',
+    rec:'T(n) = 2T(n/2) + Θ(n)', time:'Θ(n log n)', space:'O(n)', master:'Case 2'
+  },
+  convex: {
+    num:'08', name:'Convex Hull',
+    desc:"Andrew's monotone chain: sort points by x, then build lower and upper hulls maintaining the left-turn invariant.",
+    divide:'Sort all n points by x-coordinate (then y as tiebreak).',
+    conquer:'Build lower hull (left→right) and upper hull (right→left).',
+    combine:'Concatenate lower and upper hulls, removing duplicate endpoints.',
+    rec:'T(n) = O(n log n)', time:'Θ(n log n)', space:'O(n)', master:'Dominated by the sort step'
+  }
+};
+
+// ── DOM helpers ───────────────────────────────────────────
+const g = x => document.getElementById(x);
+
+function log(txt, cls = 'info') {
+  const d = document.createElement('div');
+  d.className = 'le ' + cls;
+  d.textContent = txt;
+  g('logEl').appendChild(d);
+  g('logEl').scrollTop = 99999;
+}
+
+function clrLog() { g('logEl').innerHTML = ''; }
+
+function setPhase(p) {
+  ['phD','phC','phCB'].forEach(x => g(x).className = 'ph');
+  if (p === 'd')  g('phD').className  = 'ph don';
+  if (p === 'c')  g('phC').className  = 'ph con';
+  if (p === 'cb') g('phCB').className = 'ph cbon';
+}
+
+function setSt(s, t) {
+  g('dot').className = 'dot ' + s;
+  g('stxt').textContent = t;
+}
+
+function delay(ms) {
+  return new Promise(r => {
+    if (stepMode) { stepRes = r; }
+    else setTimeout(r, ms);
+  });
+}
+
+// ── Load algorithm ────────────────────────────────────────
+function loadAlgo(name) {
+  algo = name;
+  const m = META[name];
+  g('aNum').textContent    = m.num;
+  g('aName').textContent   = m.name;
+  g('aDesc').textContent   = m.desc;
+  g('sDivide').textContent = m.divide;
+  g('sConquer').textContent= m.conquer;
+  g('sCombine').textContent= m.combine;
+  g('cxR').textContent     = m.rec;
+  g('cxT').textContent     = m.time;
+  g('cxS').textContent     = m.space;
+  g('cxM').textContent     = m.master;
+  genData();
+  resetViz();
+}
+
+function genData() {
+  const geo = ['closest','convex'], mat = ['matrix','strassen'];
+  if (geo.includes(algo)) {
+    pts = Array.from({length:24}, () => ({x: Math.random()*.86+.07, y: Math.random()*.82+.09}));
+  } else if (!mat.includes(algo)) {
+    const n = ['minmax','maxsub'].includes(algo) ? 12 : 16;
+    arr = Array.from({length:n}, () => Math.floor(Math.random()*89)+10);
+    if (algo === 'maxsub') arr = arr.map(v => v - 50);
+  }
+}
+
+// ── Reset visualisation ───────────────────────────────────
+function resetViz() {
+  running = false; stepMode = false; stepRes = null;
+  setSt('', 'Ready'); setPhase(null);
+  clrLog();
+  log('▸ Press Run to animate, or Step to advance one operation at a time.', 'init');
+
+  const geo = ['closest','convex'], mat = ['matrix','strassen'];
+  g('treeRoot').style.display = (geo.includes(algo) || mat.includes(algo)) ? 'none' : 'flex';
+  g('gc').style.display       = geo.includes(algo) ? 'block' : 'none';
+  g('mstage').style.display   = mat.includes(algo) ? 'flex'  : 'none';
+
+  treeNodes = {}; nodeCounter = 0;
+
+  if (!geo.includes(algo) && !mat.includes(algo)) {
+    g('treeRoot').innerHTML = '';
+    initTree(arr);
+  }
+  if (geo.includes(algo)) { resizeCv(); drawGeo(pts, [], null, []); }
+  if (mat.includes(algo)) {
+    g('mstage').innerHTML = '<div style="color:#9ca3af;font-size:13px;margin-top:50px">Press Run to begin matrix visualization.</div>';
+  }
+}
+
+// ── Run / Step ────────────────────────────────────────────
+async function runAlgo()  { if (running) return; stepMode = false; clrLog(); await go(); }
+async function stepAlgo() {
+  if (!running) { stepMode = true; clrLog(); go(); return; }
+  if (stepRes) { const r = stepRes; stepRes = null; r(); }
+}
+
+async function go() {
+  running = true; setSt('running', 'Running…');
+  g('btnRun').disabled = true; g('btnReset').disabled = true;
+  try {
+    if      (algo === 'mergesort') await animMerge();
+    else if (algo === 'quicksort') await animQuick();
+    else if (algo === 'minmax')    await animMinMax();
+    else if (algo === 'maxsub')    await animMaxSub();
+    else if (algo === 'matrix')    await animMatrix();
+    else if (algo === 'strassen')  await animStrassen();
+    else if (algo === 'closest')   await animClosest();
+    else if (algo === 'convex')    await animConvex();
+    setSt('done', 'Complete ✓');
+    log('✓ Algorithm complete.', 'result');
+  } catch(e) {}
+  finally {
+    running = false;
+    g('btnRun').disabled = false;
+    g('btnReset').disabled = false;
+    stepRes = null;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TREE ENGINE
+═══════════════════════════════════════════════════════════ */
+function mkNode(vals, cls, lbl) {
+  const nid = 'n' + (nodeCounter++);
+  treeNodes[nid] = { values:[...vals], cls:cls||'', label:lbl||'', children:[], cellCls:[] };
+  return nid;
+}
+
+function addChild(pid, cid) { treeNodes[pid].children.push(cid); }
+
+function rootId() {
+  const ch = new Set(Object.values(treeNodes).flatMap(n => n.children));
+  return Object.keys(treeNodes).find(k => !ch.has(k));
+}
+
+function initTree(a) {
+  treeNodes = {}; nodeCounter = 0;
+  mkNode(a, '', 'Unsorted Array');
+  rerender();
+}
+
+function rerender() {
+  const root = g('treeRoot');
+  root.innerHTML = '';
+  const rid = rootId();
+  if (rid) renderSub(root, rid, true);
+}
+
+function renderSub(container, nid, isRoot) {
+  const node = treeNodes[nid];
+  const wrap = document.createElement('div');
+  wrap.className = 'tnw' + (isRoot ? ' rootn' : '');
+  wrap.id = 'w_' + nid;
+
+  const lbl = document.createElement('div');
+  lbl.className = 'node-lbl';
+  lbl.textContent = node.label || '';
+  wrap.appendChild(lbl);
+
+  const anode = document.createElement('div');
+  anode.className = 'anode ' + (node.cls || '');
+  anode.id = 'a_' + nid;
+  node.values.forEach((v, i) => {
+    const c = document.createElement('div');
+    c.className = 'acell ' + (node.cellCls && node.cellCls[i] ? node.cellCls[i] : '');
+    c.textContent = v;
+    anode.appendChild(c);
+  });
+  wrap.appendChild(anode);
+
+  if (node.children.length) {
+    const cr = document.createElement('div');
+    cr.style.cssText = 'display:flex;justify-content:center;gap:0';
+    node.children.forEach(cid => renderSub(cr, cid, false));
+    wrap.appendChild(cr);
+  }
+
+  container.appendChild(wrap);
+}
+
+function animNode(nid, cls, lbl, ccls) {
+  const n = treeNodes[nid]; if (!n) return;
+  n.cls = cls;
+  if (lbl !== undefined)  n.label   = lbl;
+  if (ccls !== undefined) n.cellCls = ccls;
+  const el = g('a_' + nid);
+  if (el) {
+    el.className = 'anode ' + cls;
+    if (ccls) el.querySelectorAll('.acell').forEach((c,i) => c.className = 'acell ' + (ccls[i]||''));
+  }
+  const ll = g('w_' + nid)?.querySelector('.node-lbl');
+  if (ll && lbl !== undefined) ll.textContent = lbl;
+}
+
+function updNode(nid, vals, cls, ccls) {
+  const n = treeNodes[nid]; if (!n) return;
+  n.values = [...vals];
+  if (cls)  n.cls     = cls;
+  if (ccls) n.cellCls = ccls;
+  const el = g('a_' + nid);
+  if (el) {
+    el.className = 'anode ' + (cls || n.cls || '');
+    el.innerHTML = '';
+    vals.forEach((v, i) => {
+      const c = document.createElement('div');
+      c.className = 'acell ' + (ccls && ccls[i] ? ccls[i] : '');
+      c.textContent = v;
+      el.appendChild(c);
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   1. MERGE SORT
+═══════════════════════════════════════════════════════════ */
+async function animMerge() {
+  const a = [...arr];
+  log('▸ Merge Sort — ' + a.length + ' elements', 'info');
+  treeNodes = {}; nodeCounter = 0;
+  mkNode(a, '', 'Unsorted Array');
+  rerender();
+  await delay(spd());
+  await mSort(a, rootId());
+}
+
+async function mSort(a, nid) {
+  if (a.length <= 1) {
+    animNode(nid, 'base', 'Base ■');
+    await delay(spd() * .4);
+    return a;
+  }
+  const m = Math.floor(a.length / 2);
+  const L = a.slice(0, m), R = a.slice(m);
+
+  setPhase('d');
+  log('  DIVIDE  [' + a.join(',') + ']  →  [' + L.join(',') + '] + [' + R.join(',') + ']', 'divide');
+  animNode(nid, 'dividing', 'Dividing…');
+  await delay(spd());
+
+  const li = mkNode(L, '', 'Left');
+  const ri = mkNode(R, '', 'Right');
+  addChild(nid, li);
+  addChild(nid, ri);
+  rerender();
+  await delay(spd() * .5);
+
+  setPhase('c');
+  const sL = await mSort(L, li);
+  const sR = await mSort(R, ri);
+
+  setPhase('cb');
+  log('  MERGE   [' + sL.join(',') + '] + [' + sR.join(',') + ']', 'combine');
+  animNode(nid, 'merging', 'Merging…');
+  await delay(spd());
+
+  const merged = mge(sL, sR);
+  updNode(nid, merged, 'sorted');
+  animNode(nid, 'sorted', 'Sorted ✓');
+  log('  RESULT  [' + merged.join(',') + ']', 'combine');
+  await delay(spd() * .6);
+  return merged;
+}
+
+function mge(L, R) {
+  const r = []; let i = 0, j = 0;
+  while (i < L.length && j < R.length) {
+    if (L[i] <= R[j]) r.push(L[i++]); else r.push(R[j++]);
+  }
+  return [...r, ...L.slice(i), ...R.slice(j)];
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2. QUICK SORT
+═══════════════════════════════════════════════════════════ */
+async function animQuick() {
+  const a = [...arr];
+  log('▸ Quick Sort — ' + a.length + ' elements', 'info');
+  treeNodes = {}; nodeCounter = 0;
+  mkNode(a, '', 'Unsorted Array');
+  rerender();
+  await delay(spd());
+  await qSort(a, rootId());
+}
+
+async function qSort(a, nid) {
+  if (a.length <= 1) {
+    animNode(nid, 'sorted', a.length === 0 ? 'Empty' : 'Sorted ✓');
+    return a;
+  }
+  const pv = a[a.length - 1];
+  setPhase('d');
+  log('  DIVIDE  pivot=' + pv + '  arr=[' + a.join(',') + ']', 'divide');
+  animNode(nid, 'dividing', 'Picking Pivot…', a.map((_, i) => i === a.length - 1 ? 'hp' : ''));
+  await delay(spd());
+
+  const L = a.slice(0, -1).filter(x => x <  pv);
+  const R = a.slice(0, -1).filter(x => x >= pv);
+  log('  PARTITION  left=[' + L.join(',') + ']  pivot=' + pv + '  right=[' + R.join(',') + ']', 'divide');
+
+  const li = mkNode(L,    '',          'Left');
+  const pi = mkNode([pv], 'pivot-node','Pivot');
+  const ri = mkNode(R,    '',          'Right');
+  addChild(nid, li); addChild(nid, pi); addChild(nid, ri);
+  rerender();
+  animNode(pi, 'sorted', 'Pivot ✓');
+  await delay(spd());
+
+  setPhase('c');
+  const sL = await qSort(L, li);
+  const sR = await qSort(R, ri);
+
+  setPhase('cb');
+  const merged = [...sL, pv, ...sR];
+  updNode(nid, merged, 'sorted');
+  animNode(nid, 'sorted', 'Sorted ✓');
+  log('  COMBINE  [' + merged.join(',') + ']', 'combine');
+  await delay(spd() * .5);
+  return merged;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   3. MIN / MAX
+═══════════════════════════════════════════════════════════ */
+async function animMinMax() {
+  const a = [...arr];
+  log('▸ Min/Max — ' + a.length + ' elements', 'info');
+  treeNodes = {}; nodeCounter = 0;
+  mkNode(a, '', 'Array');
+  rerender();
+  await delay(spd());
+  const {mn, mx} = await mmNode(a, rootId());
+  const ci = a.map(v => v === mn ? 'hmin' : v === mx ? 'hmax' : '');
+  updNode(rootId(), a, 'sorted', ci);
+  log('  RESULT  Min=' + mn + '  Max=' + mx, 'result');
+}
+
+async function mmNode(a, nid) {
+  if (a.length === 1) {
+    animNode(nid, 'base', 'Base');
+    await delay(spd() * .4);
+    return {mn: a[0], mx: a[0]};
+  }
+  if (a.length === 2) {
+    setPhase('c');
+    log('  COMPARE  ' + a[0] + ' vs ' + a[1], 'conquer');
+    animNode(nid, 'conquering', 'Compare pair', ['hc', 'hc']);
+    await delay(spd());
+    animNode(nid, 'sorted', 'Done');
+    return {mn: Math.min(...a), mx: Math.max(...a)};
+  }
+  const m = Math.floor(a.length / 2);
+  const L = a.slice(0, m), R = a.slice(m);
+
+  setPhase('d');
+  log('  DIVIDE  [' + a.join(',') + ']  →  [' + L.join(',') + '] + [' + R.join(',') + ']', 'divide');
+  animNode(nid, 'dividing', 'Dividing…');
+  await delay(spd());
+
+  const li = mkNode(L, '', 'Left');
+  const ri = mkNode(R, '', 'Right');
+  addChild(nid, li); addChild(nid, ri);
+  rerender();
+  await delay(spd() * .4);
+
+  setPhase('c');
+  const lR = await mmNode(L, li);
+  const rR = await mmNode(R, ri);
+
+  setPhase('cb');
+  const mn = Math.min(lR.mn, rR.mn), mx = Math.max(lR.mx, rR.mx);
+  log('  COMBINE  min(' + lR.mn + ',' + rR.mn + ')=' + mn + '  max(' + lR.mx + ',' + rR.mx + ')=' + mx, 'combine');
+  animNode(nid, 'merging', 'Combining…');
+  await delay(spd());
+  return {mn, mx};
+}
+
+/* ═══════════════════════════════════════════════════════════
+   4. MAX SUBARRAY
+═══════════════════════════════════════════════════════════ */
+async function animMaxSub() {
+  const a = [...arr];
+  log('▸ Max Subarray — ' + a.length + ' elements (mixed +/−)', 'info');
+  treeNodes = {}; nodeCounter = 0;
+  mkNode(a, '', 'Array');
+  rerender();
+  await delay(spd());
+  const res = await msNode(a, 0, a.length - 1, rootId());
+  const ci = a.map((_, i) => i >= res.l && i <= res.r ? 'hm' : '');
+  updNode(rootId(), a, 'sorted', ci);
+  log('  RESULT  Max Sum=' + res.sum + '  Subarray=[' + a.slice(res.l, res.r+1).join(',') + ']', 'result');
+}
+
+async function msNode(a, gl, gr, nid) {
+  if (gl === gr) {
+    animNode(nid, 'base', 'Base', ['hc']);
+    await delay(spd() * .4);
+    return {sum: a[gl], l: gl, r: gr};
+  }
+  const mid = Math.floor((gl + gr) / 2);
+  const L = a.slice(gl, mid+1), R = a.slice(mid+1, gr+1);
+
+  setPhase('d');
+  log('  DIVIDE  [' + gl + '…' + gr + ']  mid=' + mid, 'divide');
+  animNode(nid, 'dividing', 'Dividing…');
+  await delay(spd());
+
+  const li = mkNode(L, '', 'Left [' + gl + '…' + mid + ']');
+  const ri = mkNode(R, '', 'Right [' + (mid+1) + '…' + gr + ']');
+  addChild(nid, li); addChild(nid, ri);
+  rerender();
+  await delay(spd() * .4);
+
+  setPhase('c');
+  const lR = await msNode(a, gl,    mid, li);
+  const rR = await msNode(a, mid+1, gr,  ri);
+
+  setPhase('cb');
+  // Crossing subarray
+  let sL = -Infinity, sR = -Infinity, cur = 0, li2 = mid, ri2 = mid+1;
+  for (let i = mid;   i >= gl; i--) { cur += a[i]; if (cur > sL) { sL = cur; li2 = i; } }
+  cur = 0;
+  for (let i = mid+1; i <= gr; i++) { cur += a[i]; if (cur > sR) { sR = cur; ri2 = i; } }
+  const cross = {sum: sL + sR, l: li2, r: ri2};
+
+  log('  CROSS   sum=' + cross.sum + '  indices [' + li2 + '…' + ri2 + ']', 'combine');
+  const xi = mkNode(a.slice(li2, ri2+1), 'conquering', 'Cross sum=' + cross.sum);
+  addChild(nid, xi);
+  rerender();
+  await delay(spd());
+  animNode(xi, 'merging');
+
+  const best = [lR, rR, cross].reduce((b, c) => c.sum > b.sum ? c : b);
+  animNode(nid, 'sorted', 'Best=' + best.sum);
+  await delay(spd() * .5);
+  return best;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   5. MATRIX MULTIPLY
+═══════════════════════════════════════════════════════════ */
+function rndM(n) {
+  return Array.from({length:n}, () => Array.from({length:n}, () => Math.floor(Math.random()*9)+1));
+}
+
+function mkGrid(parent, M, pid) {
+  const n = M.length;
+  const gr = document.createElement('div');
+  gr.className = 'mgrid'; gr.id = pid;
+  gr.style.gridTemplateColumns = `repeat(${n},42px)`;
+  gr.style.gridTemplateRows    = `repeat(${n},42px)`;
+  M.forEach((row, i) => row.forEach((v, j) => {
+    const c = document.createElement('div');
+    c.className = 'mc'; c.id = `${pid}_${i}_${j}`; c.textContent = v;
+    gr.appendChild(c);
+  }));
+  parent.appendChild(gr);
+}
+
+async function animMatrix() {
+  const n = 4, A = rndM(n), B = rndM(n);
+  const ms = g('mstage'); ms.innerHTML = '';
+
+  const mr  = document.createElement('div'); mr.className = 'mrowd';
+  const gA  = document.createElement('div'); gA.id  = 'mgA';
+  const gB  = document.createElement('div'); gB.id  = 'mgB';
+  const gC  = document.createElement('div'); gC.id  = 'mgC';
+  const lX  = document.createElement('div'); lX.className  = 'mlbl'; lX.textContent  = '×';
+  const lEq = document.createElement('div'); lEq.className = 'mlbl'; lEq.textContent = '=';
+  mr.append(gA, lX, gB, lEq, gC);
+  ms.appendChild(mr);
+
+  const inf = document.createElement('div'); inf.className = 'minfo'; ms.appendChild(inf);
+  mkGrid(gA, A, 'mgA');
+  mkGrid(gB, B, 'mgB');
+  mkGrid(Array.from({length:n}, () => Array(n).fill(0)), 'mgC');
+
+  setPhase('d');
+  log('▸ Matrix Multiply ' + n + '×' + n, 'info');
+  log('  DIVIDE  Split A, B into 2×2 blocks of ' + (n/2) + '×' + (n/2), 'divide');
+  inf.textContent = 'DIVIDE: Partitioning ' + n + '×' + n + ' matrices into four ' + (n/2) + '×' + (n/2) + ' sub-matrices each.';
+  await delay(spd() * 2);
+
+  setPhase('c');
+  log('  CONQUER  8 recursive sub-matrix multiplications', 'conquer');
+  const C = Array.from({length:n}, () => Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      inf.textContent = 'CONQUER: Computing C[' + i + '][' + j + '] = row ' + i + ' of A · col ' + j + ' of B';
+      for (let k = 0; k < n; k++) {
+        const ca = g('mgA_'+i+'_'+k), cb = g('mgB_'+k+'_'+j);
+        if (ca) ca.className = 'mc ha';
+        if (cb) cb.className = 'mc hb';
+      }
+      const cc = g('mgC_'+i+'_'+j); if (cc) cc.className = 'mc cp';
+      await delay(spd() * .9);
+
+      let s = 0; for (let k = 0; k < n; k++) s += A[i][k] * B[k][j]; C[i][j] = s;
+      if (cc) { cc.className = 'mc hr'; cc.textContent = s; }
+      for (let k = 0; k < n; k++) {
+        const ca = g('mgA_'+i+'_'+k), cb = g('mgB_'+k+'_'+j);
+        if (ca) ca.className = 'mc'; if (cb) cb.className = 'mc';
+      }
+      log('  C[' + i + '][' + j + '] = ' + s, 'combine');
+    }
+  }
+  setPhase('cb');
+  inf.textContent = 'COMBINE: All sub-products assembled into result matrix C = A×B ✓';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   6. STRASSEN'S
+═══════════════════════════════════════════════════════════ */
+async function animStrassen() {
+  const n = 2, A = rndM(n), B = rndM(n);
+  const ms = g('mstage'); ms.innerHTML = '';
+
+  const mr  = document.createElement('div'); mr.className = 'mrowd';
+  const gA  = document.createElement('div'); gA.id  = 'sA';
+  const gB  = document.createElement('div'); gB.id  = 'sB';
+  const gC  = document.createElement('div'); gC.id  = 'sC';
+  const lX  = document.createElement('div'); lX.className  = 'mlbl'; lX.textContent  = '×';
+  const lEq = document.createElement('div'); lEq.className = 'mlbl'; lEq.textContent = '=';
+  mr.append(gA, lX, gB, lEq, gC);
+  ms.appendChild(mr);
+
+  mkGrid(gA, A, 'sA');
+  mkGrid(gB, B, 'sB');
+  mkGrid([[0,0],[0,0]], 'sC');
+
+  const sb  = document.createElement('div'); sb.className  = 'sblock'; ms.appendChild(sb);
+  const inf = document.createElement('div'); inf.className = 'minfo';  ms.appendChild(inf);
+
+  const fmls = [
+    'M₁ = (A₁₁+A₂₂)(B₁₁+B₂₂)',
+    'M₂ = (A₂₁+A₂₂)·B₁₁',
+    'M₃ = A₁₁·(B₁₂−B₂₂)',
+    'M₄ = A₂₂·(B₂₁−B₁₁)',
+    'M₅ = (A₁₁+A₁₂)·B₂₂',
+    'M₆ = (A₂₁−A₁₁)(B₁₁+B₁₂)',
+    'M₇ = (A₁₂−A₂₂)(B₂₁+B₂₂)'
+  ];
+  const mDs = fmls.map(f => {
+    const d = document.createElement('div');
+    d.className = 'sm'; d.textContent = f; sb.appendChild(d); return d;
+  });
+
+  const [a,b,c,d2] = [A[0][0], A[0][1], A[1][0], A[1][1]];
+  const [e,f,gg,h] = [B[0][0], B[0][1], B[1][0], B[1][1]];
+  const Ms = [
+    (a+d2)*(e+h), (c+d2)*e, a*(f-h), d2*(gg-e), (a+b)*h, (c-a)*(e+f), (b-d2)*(gg+h)
+  ];
+
+  setPhase('d');
+  log('▸ Strassen 2×2 — only 7 multiplications needed', 'info');
+  inf.textContent = 'DIVIDE: Partitioning 2×2 matrices into scalar elements.';
+  await delay(spd() * 1.5);
+
+  setPhase('c');
+  log('  CONQUER  Computing M₁…M₇', 'conquer');
+  for (let i = 0; i < 7; i++) {
+    mDs[i].className = 'sm act';
+    inf.textContent  = 'CONQUER: ' + fmls[i] + ' = ' + Ms[i];
+    log('  M' + (i+1) + ' = ' + Ms[i], 'conquer');
+    await delay(spd() * 1.2);
+    mDs[i].className = 'sm dn';
+    mDs[i].textContent = fmls[i].split('=')[0].trim() + ' = ' + Ms[i];
+  }
+
+  setPhase('cb');
+  log('  COMBINE  Assembling C from M values', 'combine');
+  inf.textContent = 'COMBINE: C₁₁=M₁+M₄−M₅+M₇  |  C₁₂=M₃+M₅  |  C₂₁=M₂+M₄  |  C₂₂=M₁−M₂+M₃+M₆';
+  await delay(spd() * 1.5);
+
+  const Cv = [
+    [Ms[0]+Ms[3]-Ms[4]+Ms[6], Ms[2]+Ms[4]],
+    [Ms[1]+Ms[3],              Ms[0]-Ms[1]+Ms[2]+Ms[5]]
+  ];
+  const sc = g('sC');
+  sc.innerHTML = '';
+  sc.style.gridTemplateColumns = 'repeat(2,42px)';
+  sc.style.gridTemplateRows    = 'repeat(2,42px)';
+  Cv.forEach(row => row.forEach(v => {
+    const c = document.createElement('div');
+    c.className = 'mc hr'; c.textContent = v; sc.appendChild(c);
+  }));
+  log('  C = [[' + Cv[0] + '],[' + Cv[1] + ']]', 'result');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GEOMETRY HELPERS
+═══════════════════════════════════════════════════════════ */
+function resizeCv() {
+  const cv = g('gc');
+  cv.width  = cv.parentElement.clientWidth || 700;
+  cv.height = 450;
+}
+
+function drawGeo(allPts, hl, line, hull) {
+  const cv = g('gc'), ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(209,213,219,.4)'; ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  const px = p => ({x: p.x * W, y: p.y * H});
+
+  // Convex hull polygon
+  if (hull && hull.length > 2) {
+    const hp = hull.map(px);
+    ctx.beginPath(); ctx.moveTo(hp[0].x, hp[0].y);
+    hp.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.fillStyle   = 'rgba(5,150,105,.07)';
+    ctx.strokeStyle = 'rgba(5,150,105,.75)';
+    ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
+  }
+
+  // Divide line (closest pair)
+  if (hl && hl.divX !== undefined) {
+    const dx = hl.divX * W;
+    ctx.save();
+    ctx.setLineDash([5,5]);
+    ctx.strokeStyle = 'rgba(37,99,235,.55)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(dx,0); ctx.lineTo(dx,H); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Closest pair line
+  if (line) {
+    const p1 = px(line[0]), p2 = px(line[1]);
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = 'rgba(220,38,38,.85)'; ctx.lineWidth = 2.5; ctx.stroke();
+  }
+
+  // Points
+  const hlSet   = new Set(Array.isArray(hl) ? hl : []);
+  const hullSet = new Set(hull || []);
+  allPts.forEach(p => {
+    const {x, y} = px(p);
+    const isHL   = hlSet.has(p);
+    const isHull = hullSet.has(p);
+    ctx.beginPath(); ctx.arc(x, y, isHL ? 7 : 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = isHull ? '#059669' : isHL ? '#dc2626' : '#2563eb';
+    ctx.fill();
+    if (isHull || isHL) {
+      ctx.strokeStyle = isHull ? 'rgba(5,150,105,.35)' : 'rgba(220,38,38,.35)';
+      ctx.lineWidth = 2; ctx.stroke();
+    }
+  });
+}
+
+function pdist(a, b) {
+  const dx = a.x - b.x, dy = a.y - b.y;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   7. CLOSEST PAIR
+═══════════════════════════════════════════════════════════ */
+async function animClosest() {
+  const sorted = [...pts].sort((a,b) => a.x - b.x);
+  log('▸ Closest Pair — ' + sorted.length + ' points', 'info');
+  drawGeo(sorted, [], null, []);
+  const res = await cpRec(sorted, 0, sorted.length - 1);
+  drawGeo(sorted, [res.p1, res.p2], [res.p1, res.p2], []);
+  log('  RESULT  Distance = ' + res.d.toFixed(4), 'result');
+}
+
+async function cpRec(s, l, r) {
+  if (r - l <= 2) {
+    let best = {d: Infinity, p1: null, p2: null};
+    for (let i = l; i <= r; i++)
+      for (let j = i+1; j <= r; j++) {
+        const d = pdist(s[i], s[j]);
+        if (d < best.d) best = {d, p1: s[i], p2: s[j]};
+      }
+    log('  BASE    pts[' + l + '…' + r + ']  d=' + best.d.toFixed(3), 'conquer');
+    drawGeo(s, s.slice(l, r+1), null, []);
+    await delay(spd());
+    return best;
+  }
+
+  const m = Math.floor((l + r) / 2), midX = s[m].x;
+  setPhase('d');
+  log('  DIVIDE  [' + l + '…' + r + ']  split at x=' + midX.toFixed(3), 'divide');
+  drawGeo(s, {divX: midX}, null, []);
+  await delay(spd());
+
+  setPhase('c');
+  const lR = await cpRec(s, l, m);
+  const rR = await cpRec(s, m+1, r);
+  const delta = Math.min(lR.d, rR.d);
+  let best = lR.d < rR.d ? lR : rR;
+
+  setPhase('cb');
+  log('  STRIP   δ=' + delta.toFixed(3) + '  checking strip around x=' + midX.toFixed(3), 'combine');
+  const strip = s.filter(p => Math.abs(p.x - midX) < delta);
+  for (let i = 0; i < strip.length; i++) {
+    for (let j = i+1; j < strip.length && (strip[j].y - strip[i].y) < delta; j++) {
+      const d = pdist(strip[i], strip[j]);
+      if (d < best.d) {
+        best = {d, p1: strip[i], p2: strip[j]};
+        drawGeo(s, [strip[i], strip[j]], [strip[i], strip[j]], []);
+        await delay(spd() * .5);
+      }
+    }
+  }
+  return best;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   8. CONVEX HULL
+═══════════════════════════════════════════════════════════ */
+function cross2(o, a, b) {
+  return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+}
+
+async function animConvex() {
+  const sorted = [...pts].sort((a,b) => a.x - b.x || a.y - b.y);
+  log('▸ Convex Hull — ' + sorted.length + ' points', 'info');
+  drawGeo(sorted, [], null, []);
+
+  setPhase('d');
+  log('  SORT    Points sorted by x-coordinate', 'divide');
+  await delay(spd());
+
+  setPhase('c');
+  log('  LOWER   Building lower hull left → right', 'conquer');
+  const lower = [];
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross2(lower[lower.length-2], lower[lower.length-1], p) <= 0)
+      lower.pop();
+    lower.push(p);
+    drawGeo(sorted, [], null, [...lower]);
+    await delay(spd() * .4);
+  }
+
+  log('  UPPER   Building upper hull right → left', 'conquer');
+  const upper = [];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const p = sorted[i];
+    while (upper.length >= 2 && cross2(upper[upper.length-2], upper[upper.length-1], p) <= 0)
+      upper.pop();
+    upper.push(p);
+    drawGeo(sorted, [], null, [...lower, ...upper]);
+    await delay(spd() * .4);
+  }
+
+  setPhase('cb');
+  lower.pop(); upper.pop();
+  const hull = [...lower, ...upper];
+  log('  COMBINE  Lower + Upper = ' + hull.length + ' hull vertices', 'combine');
+  drawGeo(sorted, [], null, hull);
+  log('  RESULT  ' + hull.length + '-vertex convex hull', 'result');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EVENT WIRING
+═══════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  loadAlgo('mergesort');
+
+  g('algoNav').addEventListener('click', e => {
+    const btn = e.target.closest('.nb');
+    if (!btn || running) return;
+    document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadAlgo(btn.dataset.algo);
+  });
+
+  g('btnRun').addEventListener('click',   runAlgo);
+  g('btnStep').addEventListener('click',  stepAlgo);
+  g('btnReset').addEventListener('click', () => { genData(); resetViz(); });
+  g('btnNew').addEventListener('click',   () => { genData(); resetViz(); });
+
+  window.addEventListener('resize', () => {
+    if (['closest','convex'].includes(algo)) { resizeCv(); drawGeo(pts, [], null, []); }
+  });
+
+  setTimeout(() => {
+    resizeCv();
+    if (['closest','convex'].includes(algo)) drawGeo(pts, [], null, []);
+  }, 80);
+});
+</script>
+</body>
+</html>
